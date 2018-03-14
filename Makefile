@@ -26,7 +26,12 @@ build: cmd/abigen cmd/bootnode cmd/disasm cmd/ethtest cmd/evm cmd/gethrpctest cm
 	@ls -ld $(BINARY)/*
 
 cmd/geth: ## Build a local snapshot binary version of geth. Use WITH_SVM=0 to disable building with SputnikVM (default: WITH_SVM=1)
-	if [ ${WITH_SVM} == 1 ]; then ./scripts/build_sputnikvm.sh build ; else mkdir -p ./${BINARY} && go build ${LDFLAGS} -o ${BINARY}/geth ./cmd/geth ; fi
+ifeq (${WITH_SVM}, 1)
+	./scripts/build_sputnikvm.sh build
+else
+	mkdir -p ./${BINARY}
+	go build ${LDFLAGS} -o ${BINARY}/geth ./cmd/geth
+endif
 	@echo "Done building geth."
 	@echo "Run \"$(BINARY)/geth\" to launch geth."
 
@@ -71,7 +76,11 @@ install: ## Install all packages to $GOPATH/bin
 
 install_geth: ## Install geth to $GOPATH/bin. Use WITH_SVM=0 to disable building with SputnikVM (default: WITH_SVM=1)
 	$(info Installing $$GOPATH/bin/geth)
-	if [ ${WITH_SVM} == 1 ]; then ./scripts/build_sputnikvm.sh install ; else go install ${LDFLAGS} ./cmd/geth ; fi
+ifeq (${WITH_SVM}, 1)
+	./scripts/build_sputnikvm.sh install
+else
+	go install ${LDFLAGS} ./cmd/geth
+endif
 
 fmt: ## gofmt and goimports all go files
 	find . -name '*.go' -not -wholename './vendor/*' -not -wholename './_vendor*' | while read -r file; do gofmt -w -s "$$file"; goimports -w "$$file"; done
@@ -106,6 +115,10 @@ test: ## Run all the tests
 cover: test ## Run all the tests and opens the coverage report
 	go tool cover -html=coverage.txt
 
+getenv: ## Print exports useful during development
+	@echo 'export CGO_LDFLAGS="${PWD}/vendor/github.com/ethereumproject/sputnikvm-ffi/c/libsputnikvm.a -ldl"'
+
+
 clean: ## Remove local snapshot binary directory
 	if [ -d ${BINARY} ] ; then rm -rf ${BINARY} ; fi
 
@@ -114,4 +127,4 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 
-.PHONY: setup test cover fmt lint ci build cmd/geth cmd/abigen cmd/bootnode cmd/disasm cmd/ethtest cmd/evm cmd/gethrlptest cmd/rlpdump install install_geth clean help static
+.PHONY: setup test cover fmt lint ci build cmd/geth cmd/abigen cmd/bootnode cmd/disasm cmd/ethtest cmd/evm cmd/gethrlptest cmd/rlpdump install install_geth clean help static getenv
